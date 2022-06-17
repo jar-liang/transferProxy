@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>me.jar</groupId>
-  <artifactId>myproxy</artifactId>
+  <artifactId>transferproxy</artifactId>
   <packaging>pom</packaging>
   <version>1.0</version>
 
@@ -15,8 +15,6 @@
     <module>common</module>
     <module>proxyclient</module>
     <module>proxyserver</module>
-    <module>clientOnTomcat</module>
-      <module>sock5server</module>
   </modules>
 
   <properties>
