@@ -3,7 +3,6 @@ package me.jar.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import me.jar.channel.ProxyChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +12,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ClientHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientHandler.class);
-    private Channel proxyChannel = null;
+    private Channel proxyChannel;
 
     public ClientHandler(Channel proxyChannel) {
         this.proxyChannel = proxyChannel;
@@ -24,18 +23,19 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
         if (proxyChannel != null && proxyChannel.isActive()) {
             proxyChannel.writeAndFlush(msg);
         } else {
+            LOGGER.info("===proxy channel is null or not active, close remote rdp channel");
             ctx.close();
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        LOGGER.debug("===Client disconnected.");
+        LOGGER.info("===remote rdp channel inactive.");
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        LOGGER.error("===ConnectFarHandler has caught exception, cause: {}", cause.getMessage());
+        LOGGER.error("===remote rdp channel has caught exception, cause: {}", cause.getMessage());
         ctx.close();
     }
 }

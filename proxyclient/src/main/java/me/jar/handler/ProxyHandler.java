@@ -5,11 +5,8 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import me.jar.channel.ProxyChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @Description
@@ -49,12 +46,14 @@ public class ProxyHandler extends ChannelInboundHandlerAdapter {
                     pipeline.addLast("clientHandler", new ClientHandler(ctx.channel()));
                 }
             });
+//            String host = "482251u81s.qicp.vip";
+//            int port = 54573;
             String host = "192.168.0.101";
             int port = 3389;
             bootstrap.connect(host, port)
                     .addListener((ChannelFutureListener) connectFuture -> {
                         if (connectFuture.isSuccess()) {
-                            LOGGER.info(">>>Connect far server successfully.");
+                            LOGGER.info(">>>Connect remote rdp successfully.");
 //                            ReentrantLock reentrantLock = new ReentrantLock();
 //                            reentrantLock.lock();
 //                            try {
@@ -67,7 +66,7 @@ public class ProxyHandler extends ChannelInboundHandlerAdapter {
                             clientChannel = connectFuture.channel();
                             connectFuture.channel().writeAndFlush(msg);
                         } else {
-                            LOGGER.error("===Failed to connect to far server! host: " + host + " , port: " + port);
+                            LOGGER.error("===Failed to connect to remote rpd! host: " + host + " , port: " + port);
                         }
                     });
         }
@@ -75,12 +74,12 @@ public class ProxyHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        LOGGER.debug("===Client disconnected.");
+        LOGGER.info("===proxy channel is inactive.");
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        LOGGER.error("===ConnectFarHandler has caught exception, cause: {}", cause.getMessage());
+        LOGGER.error("===proxy channel has caught exception, cause: {}", cause.getMessage());
         ctx.close();
     }
 }

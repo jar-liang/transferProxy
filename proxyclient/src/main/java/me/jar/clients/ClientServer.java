@@ -1,19 +1,11 @@
 package me.jar.clients;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import me.jar.channel.ProxyChannel;
 import me.jar.handler.ProxyHandler;
 import me.jar.utils.NettyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
