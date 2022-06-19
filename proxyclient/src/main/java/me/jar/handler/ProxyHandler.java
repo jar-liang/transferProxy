@@ -14,24 +14,10 @@ import org.slf4j.LoggerFactory;
  */
 public class ProxyHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyHandler.class);
-//    private static final ReentrantLock LOCK = new ReentrantLock();
-
     private Channel clientChannel = null;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-//        LOCK.lock();
-//        try {
-//            if (ProxyChannel.proxyChannel == null || !ProxyChannel.proxyChannel.isActive()) {
-//                ProxyChannel.proxyChannel = ctx.channel();
-//                if (ProxyChannel.clientChannel != null && ProxyChannel.clientChannel.isActive()) {
-//                    ProxyChannel.clientChannel.close();
-//                }
-//            }
-//        } finally {
-//            LOCK.unlock();
-//        }
-
         if (clientChannel != null && clientChannel.isActive()) {
             clientChannel.writeAndFlush(msg);
         } else {
@@ -46,23 +32,14 @@ public class ProxyHandler extends ChannelInboundHandlerAdapter {
                     pipeline.addLast("clientHandler", new ClientHandler(ctx.channel()));
                 }
             });
-//            String host = "482251u81s.qicp.vip";
-//            int port = 54573;
-            String host = "192.168.0.101";
-            int port = 3389;
+            String host = "482251u81s.qicp.vip";
+            int port = 54573;
+//            String host = "192.168.0.101";
+//            int port = 3389;
             bootstrap.connect(host, port)
                     .addListener((ChannelFutureListener) connectFuture -> {
                         if (connectFuture.isSuccess()) {
                             LOGGER.info(">>>Connect remote rdp successfully.");
-//                            ReentrantLock reentrantLock = new ReentrantLock();
-//                            reentrantLock.lock();
-//                            try {
-//                                if (ProxyChannel.clientChannel == null || !ProxyChannel.clientChannel.isActive()) {
-//                                    ProxyChannel.clientChannel = connectFuture.channel();
-//                                }
-//                            } finally {
-//                                reentrantLock.unlock();
-//                            }
                             clientChannel = connectFuture.channel();
                             connectFuture.channel().writeAndFlush(msg);
                         } else {
@@ -75,6 +52,7 @@ public class ProxyHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         LOGGER.info("===proxy channel is inactive.");
+
     }
 
     @Override

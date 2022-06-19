@@ -33,6 +33,19 @@ public class ConnectProxyHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
+    public void channelActive(ChannelHandlerContext ctx) {
+        LOGGER.info("proxy server channel active...");
+        LOCK.lock();
+        try {
+            if (ChannelDTO.proxyChannel == null || !ChannelDTO.proxyChannel.isActive()) {
+                ChannelDTO.proxyChannel = ctx.channel();
+            }
+        } finally {
+            LOCK.unlock();
+        }
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         // 不要打印太多日志
         LOGGER.info("===ConnectProxyHandler执行channelInactive");
