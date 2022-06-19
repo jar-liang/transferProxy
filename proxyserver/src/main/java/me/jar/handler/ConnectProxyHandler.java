@@ -14,17 +14,21 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ConnectProxyHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectProxyHandler.class);
-    private static final ReentrantLock LOCK = new ReentrantLock();
+    private final ReentrantLock lock;
+
+    public ConnectProxyHandler(ReentrantLock lock) {
+        this.lock = lock;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        LOCK.lock();
+        lock.lock();
         try {
             if (ChannelDTO.proxyChannel == null || !ChannelDTO.proxyChannel.isActive()) {
                 ChannelDTO.proxyChannel = ctx.channel();
             }
         } finally {
-            LOCK.unlock();
+            lock.unlock();
         }
 
         if (ChannelDTO.clientChannel != null && ChannelDTO.clientChannel.isActive()) {
@@ -35,13 +39,13 @@ public class ConnectProxyHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         LOGGER.info("proxy server channel active...");
-        LOCK.lock();
+        lock.lock();
         try {
             if (ChannelDTO.proxyChannel == null || !ChannelDTO.proxyChannel.isActive()) {
                 ChannelDTO.proxyChannel = ctx.channel();
             }
         } finally {
-            LOCK.unlock();
+            lock.unlock();
         }
     }
 
@@ -49,6 +53,9 @@ public class ConnectProxyHandler extends ChannelInboundHandlerAdapter {
     public void channelInactive(ChannelHandlerContext ctx) {
         // 不要打印太多日志
         LOGGER.info("===ConnectProxyHandler执行channelInactive");
+        if (ChannelDTO.clientChannel != null && ChannelDTO.clientChannel.isActive()) {
+            ChannelDTO.clientChannel.close();
+        }
         ctx.close();
     }
 

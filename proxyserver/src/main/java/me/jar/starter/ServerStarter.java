@@ -15,12 +15,15 @@ import me.jar.utils.NettyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * @Description
  * @Date 2021/4/23-23:45
  */
 public class ServerStarter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerStarter.class);
+    private static final ReentrantLock LOCK = new ReentrantLock();
 
 //    public void run() {
 //        ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
@@ -56,7 +59,7 @@ public class ServerStarter {
             protected void initChannel(SocketChannel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 // 添加与客户端交互的handler
-                pipeline.addLast("connectProxy", new ConnectProxyHandler());
+                pipeline.addLast("connectProxy", new ConnectProxyHandler(LOCK));
             }
         };
         NettyUtil.starServer(port, channelInitializer);

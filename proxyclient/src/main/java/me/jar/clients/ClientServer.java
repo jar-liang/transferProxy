@@ -21,9 +21,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ClientServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientServer.class);
-    private static final ReentrantLock LOCK = new ReentrantLock();
-    private static Channel proxyChannel = null;
-
 //    private final int port;
 //
 //    public ClientServer(int port) {
@@ -31,22 +28,17 @@ public class ClientServer {
 //    }
 
     // todo 后面要做重试机制，与proxy server保持连接
-    public void run() {
-        TimerTask timerTask = new TimerTask() {
-            @Override
-            public void run() {
-                LOCK.lock();
-                try {
-                    if (proxyChannel == null || !proxyChannel.isActive()) {
-                        connectProxyServer();
-                    }
-                } finally {
-                    LOCK.unlock();
-                }
-            }
-        };
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(timerTask, 5000L, 500L);
+    private void run() {
+//        TimerTask timerTask = new TimerTask() {
+//            @Override
+//            public void run() {
+//                synchronized (ClientServer.isNotActive) {
+//
+//                }
+//            }
+//        };
+//        Timer timer = new Timer();
+//        timer.scheduleAtFixedRate(timerTask, 5000L, 500L);
 
 //        ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
 //            @Override
@@ -57,7 +49,7 @@ public class ClientServer {
 //        NettyUtil.starServer(port, channelInitializer);
     }
 
-    private void connectProxyServer() {
+    public static void connectProxyServer() {
         EventLoopGroup workGroup = new NioEventLoopGroup(1);
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workGroup).channel(NioSocketChannel.class)
@@ -75,12 +67,6 @@ public class ClientServer {
                 .addListener((ChannelFutureListener) connectFuture -> {
                     if (connectFuture.isSuccess()) {
                         LOGGER.info(">>>Connect proxy server successfully. host: " + host + " , port: " + port);
-                        LOCK.lock();
-                        try {
-                            proxyChannel = connectFuture.channel();
-                        } finally {
-                            LOCK.unlock();
-                        }
                     } else {
                         LOGGER.error("===Failed to connect to proxy server! host: " + host + " , port: " + port);
                     }
@@ -99,6 +85,6 @@ public class ClientServer {
 //        } else {
 //            LOGGER.error("===Failed to get port from property, starting server failed.");
 //        }
-        new ClientServer().run();
+       connectProxyServer();
     }
 }

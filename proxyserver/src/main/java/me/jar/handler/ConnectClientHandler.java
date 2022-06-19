@@ -14,17 +14,11 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectClientHandler.class);
-    private static final ReentrantLock LOCK = new ReentrantLock();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        LOCK.lock();
-        try {
-            if (ChannelDTO.clientChannel == null || !ChannelDTO.clientChannel.isActive()) {
-                ChannelDTO.clientChannel = ctx.channel();
-            }
-        } finally {
-            LOCK.unlock();
+        if (ChannelDTO.clientChannel == null || !ChannelDTO.clientChannel.isActive()) {
+            ChannelDTO.clientChannel = ctx.channel();
         }
         if (ChannelDTO.proxyChannel != null && ChannelDTO.proxyChannel.isActive()) {
             ChannelDTO.proxyChannel.writeAndFlush(msg);
