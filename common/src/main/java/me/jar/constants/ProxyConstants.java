@@ -34,4 +34,6 @@ public interface ProxyConstants {
     String FAR_SERVER_IP = "far.ip";
 
     String FAR_SERVER_PORT = "far.port";
+
+    String CHANNEL_ID = "channelId";
 }

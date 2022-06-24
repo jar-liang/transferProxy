@@ -5,8 +5,12 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import me.jar.handler.ProxyHandler;
+import me.jar.utils.Byte2TransferMsgDecoder;
+import me.jar.utils.LengthContentDecoder;
 import me.jar.utils.NettyUtil;
+import me.jar.utils.TransferMsg2ByteEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +53,7 @@ public class ClientServer {
 //        NettyUtil.starServer(port, channelInitializer);
     }
 
-    public static void connectProxyServer() {
+    public static void connectProxyServer() throws InterruptedException {
         EventLoopGroup workGroup = new NioEventLoopGroup(1);
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workGroup).channel(NioSocketChannel.class)
@@ -58,22 +62,37 @@ public class ClientServer {
             @Override
             protected void initChannel(SocketChannel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
+                pipeline.addLast("lengthContent", new LengthContentDecoder());
+                pipeline.addLast("decoder", new Byte2TransferMsgDecoder());
+                pipeline.addLast("encoder", new TransferMsg2ByteEncoder());
+                pipeline.addLast("idleEvt", new IdleStateHandler(60, 30, 0));
                 pipeline.addLast("proxyHandler", new ProxyHandler());
             }
         });
         String host = "127.0.0.1";
         int port = 13333;
-        bootstrap.connect(host, port)
-                .addListener((ChannelFutureListener) connectFuture -> {
-                    if (connectFuture.isSuccess()) {
-                        LOGGER.info(">>>Connect proxy server successfully. host: " + host + " , port: " + port);
-                    } else {
-                        LOGGER.error("===Failed to connect to proxy server! host: " + host + " , port: " + port);
+        Channel channel = bootstrap.connect(host, port).sync().channel();
+        channel.closeFuture().addListener(future -> {
+            workGroup.shutdownGracefully();
+            new Thread(() -> {
+                while (true) {
+                    try {
+                        connectProxyServer();
+                        break;
+                    } catch (InterruptedException e) {
+                        LOGGER.error("channel close retry connection failed. detail: " + e.getMessage());
+                        try {
+                            Thread.sleep(10000L);
+                        } catch (InterruptedException interruptedException) {
+                            LOGGER.error("sleep 10s was interrupted!");
+                        }
                     }
-                });
+                }
+            }).start();
+        });
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 //        if (ProxyConstants.PROPERTY.containsKey(ProxyConstants.KEY_NAME_PORT)) {
 //            String port = ProxyConstants.PROPERTY.get(ProxyConstants.KEY_NAME_PORT);
 //            try {

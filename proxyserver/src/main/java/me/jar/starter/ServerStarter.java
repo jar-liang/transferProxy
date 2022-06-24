@@ -5,13 +5,12 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.timeout.IdleStateHandler;
 import me.jar.constants.ProxyConstants;
 import me.jar.handler.ConnectClientHandler;
 import me.jar.handler.ConnectProxyHandler;
 import me.jar.handler.ConnectRemoteHandler;
-import me.jar.utils.DecryptHandler;
-import me.jar.utils.EncryptHandler;
-import me.jar.utils.NettyUtil;
+import me.jar.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +22,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ServerStarter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerStarter.class);
-    private static final ReentrantLock LOCK = new ReentrantLock();
 
 //    public void run() {
 //        ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
@@ -41,17 +39,17 @@ public class ServerStarter {
 //        NettyUtil.starServer(port, channelInitializer);
 //    }
 
-    public void runForClient(int port) {
-        ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) {
-                ChannelPipeline pipeline = ch.pipeline();
-                // 添加与客户端交互的handler
-                pipeline.addLast("connectClient", new ConnectClientHandler());
-            }
-        };
-        NettyUtil.starServer(port, channelInitializer);
-    }
+//    public void runForClient(int port) {
+//        ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
+//            @Override
+//            protected void initChannel(SocketChannel ch) {
+//                ChannelPipeline pipeline = ch.pipeline();
+//                // 添加与客户端交互的handler
+//                pipeline.addLast("connectClient", new ConnectClientHandler());
+//            }
+//        };
+//        NettyUtil.starServer(port, channelInitializer);
+//    }
 
     public void runForProxy(int port) {
         ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
@@ -59,7 +57,11 @@ public class ServerStarter {
             protected void initChannel(SocketChannel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 // 添加与客户端交互的handler
-                pipeline.addLast("connectProxy", new ConnectProxyHandler(LOCK));
+                pipeline.addLast("lengthContent", new LengthContentDecoder());
+                pipeline.addLast("decoder", new Byte2TransferMsgDecoder());
+                pipeline.addLast("encoder", new TransferMsg2ByteEncoder());
+                pipeline.addLast("idleEvt", new IdleStateHandler(60, 30, 0));
+                pipeline.addLast("connectProxy", new ConnectProxyHandler());
             }
         };
         NettyUtil.starServer(port, channelInitializer);
@@ -77,8 +79,6 @@ public class ServerStarter {
 //        } else {
 //            LOGGER.error("===Failed to get port from property, starting server failed.");
 //        }
-        new Thread(() -> new ServerStarter().runForProxy(13333)).start();
-        new Thread(() -> new ServerStarter().runForClient(12222)).start();
-        LOGGER.info("main方法done！");
+        new ServerStarter().runForProxy(13333);
     }
 }

@@ -1,12 +1,17 @@
 package me.jar.handler;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import me.jar.channel.ChannelDTO;
+import me.jar.constants.ProxyConstants;
+import me.jar.constants.TransferMsgType;
+import me.jar.message.TransferMsg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
  * @Description
@@ -14,22 +19,44 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectClientHandler.class);
+    private Channel proxyServer;
+
+    public ConnectClientHandler(Channel proxyServer) {
+        this.proxyServer = proxyServer;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (ChannelDTO.clientChannel == null || !ChannelDTO.clientChannel.isActive()) {
-            ChannelDTO.clientChannel = ctx.channel();
-        }
-        if (ChannelDTO.proxyChannel != null && ChannelDTO.proxyChannel.isActive()) {
-            ChannelDTO.proxyChannel.writeAndFlush(msg);
+        if (msg instanceof byte[]) {
+            byte[] bytes = (byte[]) msg;
+            TransferMsg transferMsg = new TransferMsg();
+            transferMsg.setType(TransferMsgType.DATA);
+            Map<String, Object> metaData = new HashMap<>(1);
+            metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
+            transferMsg.setMetaData(metaData);
+            transferMsg.setDate(bytes);
+            proxyServer.writeAndFlush(transferMsg);
         }
     }
 
     @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        TransferMsg transferMsg = new TransferMsg();
+        transferMsg.setType(TransferMsgType.CONNECT);
+        Map<String, Object> metaData = new HashMap<>(1);
+        metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
+        transferMsg.setMetaData(metaData);
+        proxyServer.writeAndFlush(transferMsg);
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        // 不要打印太多日志
-        LOGGER.info("===ConnectClientHandler执行channelInactive");
-        ctx.close();
+        TransferMsg transferMsg = new TransferMsg();
+        transferMsg.setType(TransferMsgType.DISCONNECT);
+        Map<String, Object> metaData = new HashMap<>(1);
+        metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
+        transferMsg.setMetaData(metaData);
+        proxyServer.writeAndFlush(transferMsg);
     }
 
     @Override
