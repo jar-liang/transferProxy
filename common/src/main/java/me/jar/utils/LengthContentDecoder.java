@@ -26,6 +26,7 @@ public class LengthContentDecoder extends ReplayingDecoder<DecodeState> {
                 ByteBuf byteBuf = in.readBytes(length);
                 checkpoint(DecodeState.LENGTH);
                 out.add(byteBuf);
+                break;
             default:
                 LOGGER.error("===[LengthContentDecoder] - It is a illegal decoder state!");
         }
