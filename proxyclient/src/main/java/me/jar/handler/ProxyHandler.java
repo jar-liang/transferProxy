@@ -62,6 +62,7 @@ public class ProxyHandler extends CommonHandler {
                     }
                     break;
                 case KEEPALIVE:
+                    LOGGER.error("客户端收到心跳包");
                     break;
                 default:
                     throw new TransferProxyException("unknown type: " + type.getType());
@@ -106,6 +107,7 @@ public class ProxyHandler extends CommonHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
+        LOGGER.error("客户端channelActive");
         TransferMsg transferMsg = new TransferMsg();
         transferMsg.setType(TransferMsgType.REGISTER);
         Map<String, Object> metaData = new HashMap<>(1);

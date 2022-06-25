@@ -33,6 +33,7 @@ public class CommonHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
+            LOGGER.error("执行userEventTriggered，ctx：" + ctx.channel().localAddress().toString() + "，evt: " + evt.toString());
             IdleStateEvent event = (IdleStateEvent) evt;
             if (event.state() == IdleState.READER_IDLE) {
                 LOGGER.info("===Read idle loss connection");

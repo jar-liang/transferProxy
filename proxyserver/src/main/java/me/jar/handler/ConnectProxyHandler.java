@@ -1,12 +1,12 @@
 package me.jar.handler;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -15,7 +15,6 @@ import me.jar.constants.TransferMsgType;
 import me.jar.exception.TransferProxyException;
 import me.jar.message.TransferMsg;
 import me.jar.utils.CommonHandler;
-import me.jar.utils.NettyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +34,9 @@ public class ConnectProxyHandler extends CommonHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof TransferMsg) {
+            LOGGER.error("registerFlag: " + registerFlag);
+            LOGGER.error("clientServerChannel" + clientServerChannel);
+            LOGGER.error("CHANNELS: " + CHANNELS.toString());
             TransferMsg transferMsg = (TransferMsg) msg;
             if (transferMsg.getType() == TransferMsgType.REGISTER) {
                 doRegister(transferMsg);
@@ -52,6 +54,7 @@ public class ConnectProxyHandler extends CommonHandler {
                         break;
                     case KEEPALIVE:
                         // 心跳包，不处理
+                        LOGGER.error("服务端收到心跳包");
                         break;
                     default:
                         throw new TransferProxyException("channel is registered, message type is not one of DISCONNECT,DATA,KEEPALIVE");
@@ -76,6 +79,8 @@ public class ConnectProxyHandler extends CommonHandler {
             channel.writeAndFlush(retnTransferMsg);
         } else {
             // 启动一个新的serverBootstrap
+            EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+            EventLoopGroup workerGroup = new NioEventLoopGroup();
             int port = 9999; // 暂定
             try {
                 ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
@@ -87,10 +92,24 @@ public class ConnectProxyHandler extends CommonHandler {
                         pipeline.addLast("byteArrayEncoder", new ByteArrayEncoder());
                         pipeline.addLast("connectClient", new ConnectClientHandler(channel));
                         CHANNELS.add(ch);
-                        clientServerChannel = ch;
+//                        clientServerChannel = ch;
                     }
                 };
-                NettyUtil.starServer(port, channelInitializer);
+//                NettyUtil.starServer(port, channelInitializer);
+
+                ServerBootstrap serverBootstrap = new ServerBootstrap();
+                serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+                        .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+                        .childOption(ChannelOption.SO_KEEPALIVE, true)
+                        .childHandler(channelInitializer);
+                ChannelFuture cf = serverBootstrap.bind(port).sync();
+                clientServerChannel = cf.channel();
+                LOGGER.info(">>>Proxy server started, the listening port is {}.", port);
+                cf.channel().closeFuture().addListener((ChannelFutureListener) future -> {
+                    LOGGER.error("bossGroup and workerGroup shutdown!");
+                    bossGroup.shutdownGracefully();
+                    workerGroup.shutdownGracefully();
+                });
                 metaData.put("result", "1");
                 registerFlag = true;
                 LOGGER.info("client server starting, port is " + port);
@@ -98,6 +117,8 @@ public class ConnectProxyHandler extends CommonHandler {
                 LOGGER.error("==client server starts failed, detail: " + e.getMessage());
                 metaData.put("result", "0");
                 metaData.put("reason", "client server cannot start");
+                bossGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully();
             }
         }
         retnTransferMsg.setMetaData(metaData);
@@ -111,8 +132,10 @@ public class ConnectProxyHandler extends CommonHandler {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         // 不要打印太多日志
+        LOGGER.error("服务端与客户端连接channelInactive");
         LOGGER.info("===ConnectProxyHandler执行channelInactive");
         if (clientServerChannel != null) {
+            LOGGER.error("关闭clientServerChannel");
             clientServerChannel.close();
         }
     }

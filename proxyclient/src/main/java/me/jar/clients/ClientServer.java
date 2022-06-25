@@ -9,14 +9,9 @@ import io.netty.handler.timeout.IdleStateHandler;
 import me.jar.handler.ProxyHandler;
 import me.jar.utils.Byte2TransferMsgDecoder;
 import me.jar.utils.LengthContentDecoder;
-import me.jar.utils.NettyUtil;
 import me.jar.utils.TransferMsg2ByteEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -74,22 +69,23 @@ public class ClientServer {
             int port = 13333;
             Channel channel = bootstrap.connect(host, port).channel();
             channel.closeFuture().addListener(future -> {
+                LOGGER.error("workGroup.shutdownGracefully()");
                 workGroup.shutdownGracefully();
-                new Thread(() -> {
-                    while (true) {
-                        try {
-                            connectProxyServer();
-                            break;
-                        } catch (InterruptedException e) {
-                            LOGGER.error("channel close retry connection failed. detail: " + e.getMessage());
-                            try {
-                                Thread.sleep(10000L);
-                            } catch (InterruptedException interruptedException) {
-                                LOGGER.error("sleep 10s was interrupted!");
-                            }
-                        }
-                    }
-                }).start();
+//                new Thread(() -> {
+//                    while (true) {
+//                        try {
+//                            connectProxyServer();
+//                            break;
+//                        } catch (InterruptedException e) {
+//                            LOGGER.error("channel close retry connection failed. detail: " + e.getMessage());
+//                            try {
+//                                Thread.sleep(10000L);
+//                            } catch (InterruptedException interruptedException) {
+//                                LOGGER.error("sleep 10s was interrupted!");
+//                            }
+//                        }
+//                    }
+//                }).start();
             });
         } catch (Exception e) {
             workGroup.shutdownGracefully();
