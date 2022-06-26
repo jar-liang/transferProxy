@@ -20,33 +20,6 @@ import org.slf4j.LoggerFactory;
  */
 public class ClientServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientServer.class);
-//    private final int port;
-//
-//    public ClientServer(int port) {
-//        this.port = port;
-//    }
-
-    // todo 后面要做重试机制，与proxy server保持连接
-    private void run() {
-//        TimerTask timerTask = new TimerTask() {
-//            @Override
-//            public void run() {
-//                synchronized (ClientServer.isNotActive) {
-//
-//                }
-//            }
-//        };
-//        Timer timer = new Timer();
-//        timer.scheduleAtFixedRate(timerTask, 5000L, 500L);
-
-//        ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
-//            @Override
-//            protected void initChannel(SocketChannel ch) {
-//                ch.pipeline().addLast("clientHandler", new ProxyHandler());
-//            }
-//        };
-//        NettyUtil.starServer(port, channelInitializer);
-    }
 
     public static void connectProxyServer() throws InterruptedException {
         EventLoopGroup workGroup = new NioEventLoopGroup(1);
@@ -71,21 +44,22 @@ public class ClientServer {
             channel.closeFuture().addListener(future -> {
                 LOGGER.error("workGroup.shutdownGracefully()");
                 workGroup.shutdownGracefully();
-//                new Thread(() -> {
-//                    while (true) {
-//                        try {
-//                            connectProxyServer();
-//                            break;
-//                        } catch (InterruptedException e) {
-//                            LOGGER.error("channel close retry connection failed. detail: " + e.getMessage());
-//                            try {
-//                                Thread.sleep(10000L);
-//                            } catch (InterruptedException interruptedException) {
-//                                LOGGER.error("sleep 10s was interrupted!");
-//                            }
-//                        }
-//                    }
-//                }).start();
+                new Thread(() -> {
+                    while (true) {
+                        try {
+                            Thread.sleep(10000L);
+                        } catch (InterruptedException interruptedException) {
+                            LOGGER.error("sleep 10s was interrupted!");
+                        }
+                        try {
+                            connectProxyServer();
+                            break;
+                        } catch (InterruptedException e) {
+                            LOGGER.error("channel close retry connection failed. detail: " + e.getMessage());
+
+                        }
+                    }
+                }).start();
             });
         } catch (Exception e) {
             workGroup.shutdownGracefully();
@@ -93,17 +67,6 @@ public class ClientServer {
     }
 
     public static void main(String[] args) throws InterruptedException {
-//        if (ProxyConstants.PROPERTY.containsKey(ProxyConstants.KEY_NAME_PORT)) {
-//            String port = ProxyConstants.PROPERTY.get(ProxyConstants.KEY_NAME_PORT);
-//            try {
-//                int portNum = Integer.parseInt(port.trim());
-//                new ClientServer(portNum).run();
-//            } catch (NumberFormatException e) {
-//                LOGGER.error("===Failed to parse number, property setting may be wrong.", e);
-//            }
-//        } else {
-//            LOGGER.error("===Failed to get port from property, starting server failed.");
-//        }
        connectProxyServer();
     }
 }

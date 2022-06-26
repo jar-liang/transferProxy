@@ -33,6 +33,7 @@ public class ProxyHandler extends CommonHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof TransferMsg) {
             TransferMsg transferMsg = (TransferMsg) msg;
+            LOGGER.error("客户端收到信息：" + transferMsg);
             TransferMsgType type = transferMsg.getType();
             Map<String, Object> metaData = transferMsg.getMetaData();
             String channelId = String.valueOf(metaData.get(ProxyConstants.CHANNEL_ID));

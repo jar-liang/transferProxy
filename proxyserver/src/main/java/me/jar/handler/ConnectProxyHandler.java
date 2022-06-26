@@ -38,6 +38,7 @@ public class ConnectProxyHandler extends CommonHandler {
             LOGGER.error("clientServerChannel" + clientServerChannel);
             LOGGER.error("CHANNELS: " + CHANNELS.toString());
             TransferMsg transferMsg = (TransferMsg) msg;
+            LOGGER.error("服务端收到信息：" + transferMsg);
             if (transferMsg.getType() == TransferMsgType.REGISTER) {
                 doRegister(transferMsg);
                 return;
@@ -70,13 +71,13 @@ public class ConnectProxyHandler extends CommonHandler {
         retnTransferMsg.setType(TransferMsgType.REGISTER_RESULT);
         Map<String, Object> retnMetaData = new HashMap<>();
         Map<String, Object> metaData = transferMsg.getMetaData();
-//                if (!metaData.containsKey("password") || "1qaz!QAZ".equals(metaData.get("password"))) {
-        if (false) { // todo 测试先不管密钥
+        if (!metaData.containsKey("password") || !"1qaz!QAZ".equals(metaData.get("password"))) {
+//        if (false) { // todo 测试先不管密钥
             // 没有密钥或密钥错误，返回提示， 不执行注册
             retnMetaData.put("result", "0");
             retnMetaData.put("reason", "Token is wrong");
-            retnTransferMsg.setMetaData(retnMetaData);
-            channel.writeAndFlush(retnTransferMsg);
+//            retnTransferMsg.setMetaData(retnMetaData);
+//            channel.writeAndFlush(retnTransferMsg);
         } else {
             // 启动一个新的serverBootstrap
             EventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -92,10 +93,8 @@ public class ConnectProxyHandler extends CommonHandler {
                         pipeline.addLast("byteArrayEncoder", new ByteArrayEncoder());
                         pipeline.addLast("connectClient", new ConnectClientHandler(channel));
                         CHANNELS.add(ch);
-//                        clientServerChannel = ch;
                     }
                 };
-//                NettyUtil.starServer(port, channelInitializer);
 
                 ServerBootstrap serverBootstrap = new ServerBootstrap();
                 serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
@@ -110,18 +109,18 @@ public class ConnectProxyHandler extends CommonHandler {
                     bossGroup.shutdownGracefully();
                     workerGroup.shutdownGracefully();
                 });
-                metaData.put("result", "1");
+                retnMetaData.put("result", "1");
                 registerFlag = true;
                 LOGGER.info("client server starting, port is " + port);
             } catch (Exception e) {
                 LOGGER.error("==client server starts failed, detail: " + e.getMessage());
-                metaData.put("result", "0");
-                metaData.put("reason", "client server cannot start");
+                retnMetaData.put("result", "0");
+                retnMetaData.put("reason", "client server cannot start");
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
             }
         }
-        retnTransferMsg.setMetaData(metaData);
+        retnTransferMsg.setMetaData(retnMetaData);
         channel.writeAndFlush(retnTransferMsg);
         if (!registerFlag) {
             LOGGER.error("client agent registered failed, reason: " + retnMetaData.get("reason"));

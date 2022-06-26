@@ -20,22 +20,28 @@ import java.util.Map;
 public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectClientHandler.class);
     private Channel proxyServer;
+    private boolean isReady = false;
 
     public ConnectClientHandler(Channel proxyServer) {
         this.proxyServer = proxyServer;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof byte[]) {
-            byte[] bytes = (byte[]) msg;
-            TransferMsg transferMsg = new TransferMsg();
-            transferMsg.setType(TransferMsgType.DATA);
-            Map<String, Object> metaData = new HashMap<>(1);
-            metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
-            transferMsg.setMetaData(metaData);
-            transferMsg.setDate(bytes);
-            proxyServer.writeAndFlush(transferMsg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
+        if (isReady) {
+            if (msg instanceof byte[]) {
+                byte[] bytes = (byte[]) msg;
+                TransferMsg transferMsg = new TransferMsg();
+                transferMsg.setType(TransferMsgType.DATA);
+                Map<String, Object> metaData = new HashMap<>(1);
+                metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
+                transferMsg.setMetaData(metaData);
+                transferMsg.setDate(bytes);
+                proxyServer.writeAndFlush(transferMsg);
+            }
+        } else {
+            Thread.sleep(5000L);
+            isReady = true;
         }
     }
 
