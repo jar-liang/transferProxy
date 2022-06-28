@@ -28,6 +28,10 @@ public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
+        if (!isReady) {
+            Thread.sleep(2000L);
+            isReady = true;
+        }
         if (isReady) {
             if (msg instanceof byte[]) {
                 byte[] bytes = (byte[]) msg;
@@ -39,9 +43,6 @@ public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
                 transferMsg.setDate(bytes);
                 proxyServer.writeAndFlush(transferMsg);
             }
-        } else {
-            Thread.sleep(5000L);
-            isReady = true;
         }
     }
 

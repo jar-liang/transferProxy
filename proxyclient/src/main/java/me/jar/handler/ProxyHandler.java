@@ -87,8 +87,8 @@ public class ProxyHandler extends CommonHandler {
                 CHANNEL_MAP.put(channelId, ch);
             }
         });
-        String host = "482251u81s.qicp.vip";
-        int port = 54573;
+        String host = "192.168.0.101";
+        int port = 3389;
         bootstrap.connect(host, port).addListener((ChannelFutureListener) connectFuture -> {
             if (connectFuture.isSuccess()) {
                 LOGGER.debug(">>>Connect target server successfully.");
