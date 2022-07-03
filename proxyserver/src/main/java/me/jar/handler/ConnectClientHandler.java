@@ -20,41 +20,34 @@ import java.util.Map;
 public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectClientHandler.class);
     private Channel proxyServer;
-    private boolean isReady = false;
 
     public ConnectClientHandler(Channel proxyServer) {
         this.proxyServer = proxyServer;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws InterruptedException {
-        if (!isReady) {
-            Thread.sleep(2000L);
-            isReady = true;
-        }
-        if (isReady) {
-            if (msg instanceof byte[]) {
-                byte[] bytes = (byte[]) msg;
-                TransferMsg transferMsg = new TransferMsg();
-                transferMsg.setType(TransferMsgType.DATA);
-                Map<String, Object> metaData = new HashMap<>(1);
-                metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
-                transferMsg.setMetaData(metaData);
-                transferMsg.setDate(bytes);
-                proxyServer.writeAndFlush(transferMsg);
-            }
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof byte[]) {
+            byte[] bytes = (byte[]) msg;
+            TransferMsg transferMsg = new TransferMsg();
+            transferMsg.setType(TransferMsgType.DATA);
+            Map<String, Object> metaData = new HashMap<>(1);
+            metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
+            transferMsg.setMetaData(metaData);
+            transferMsg.setDate(bytes);
+            proxyServer.writeAndFlush(transferMsg);
         }
     }
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        TransferMsg transferMsg = new TransferMsg();
-        transferMsg.setType(TransferMsgType.CONNECT);
-        Map<String, Object> metaData = new HashMap<>(1);
-        metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
-        transferMsg.setMetaData(metaData);
-        proxyServer.writeAndFlush(transferMsg);
-    }
+//    @Override // 不需要，因为客户端那边会根据是否有连接进行自动连接，不需根据CONNECT消息进行
+//    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+//        TransferMsg transferMsg = new TransferMsg();
+//        transferMsg.setType(TransferMsgType.CONNECT);
+//        Map<String, Object> metaData = new HashMap<>(1);
+//        metaData.put(ProxyConstants.CHANNEL_ID, ctx.channel().id().asLongText());
+//        transferMsg.setMetaData(metaData);
+//        proxyServer.writeAndFlush(transferMsg);
+//    }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {

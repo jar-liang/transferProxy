@@ -7,7 +7,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
-import io.netty.util.ReferenceCountUtil;
 import me.jar.constants.ProxyConstants;
 import me.jar.constants.TransferMsgType;
 import me.jar.exception.TransferProxyException;
@@ -26,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ProxyHandler extends CommonHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyHandler.class);
-//    private static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     private static final Map<String, Channel> CHANNEL_MAP = new ConcurrentHashMap<>();
 
     @Override
@@ -46,9 +44,9 @@ public class ProxyHandler extends CommonHandler {
                         ctx.close();
                     }
                     break;
-                case CONNECT:
-                    connectTarget(ctx, msg, metaData);
-                    break;
+//                case CONNECT: // 不需要了，直接根据是否有连接判断进行处理，在下面的DATA的case中处理连接
+//                    connectTarget(ctx, msg, metaData);
+//                    break;
                 case DISCONNECT:
                     Channel channel = CHANNEL_MAP.get(channelId);
                     if (channel != null) {
@@ -58,7 +56,9 @@ public class ProxyHandler extends CommonHandler {
                     break;
                 case DATA:
                     Channel channelData = CHANNEL_MAP.get(channelId);
-                    if (channelData != null) {
+                    if (channelData == null || !channelData.isActive()) {
+                        connectTarget(ctx, transferMsg.getDate(), metaData);
+                    } else {
                         channelData.writeAndFlush(transferMsg.getDate());
                     }
                     break;
@@ -71,7 +71,7 @@ public class ProxyHandler extends CommonHandler {
         }
     }
 
-    private void connectTarget(ChannelHandlerContext ctx, Object msg, Map<String, Object> metaData) {
+    private void connectTarget(ChannelHandlerContext ctx, byte[] data, Map<String, Object> metaData) {
         String channelId = String.valueOf(metaData.get(ProxyConstants.CHANNEL_ID));
         EventLoopGroup workGroup = new NioEventLoopGroup(1);
         Bootstrap bootstrap = new Bootstrap();
@@ -91,10 +91,10 @@ public class ProxyHandler extends CommonHandler {
         int port = 3389;
         bootstrap.connect(host, port).addListener((ChannelFutureListener) connectFuture -> {
             if (connectFuture.isSuccess()) {
-                LOGGER.debug(">>>Connect target server successfully.");
+                connectFuture.channel().writeAndFlush(data);
+                LOGGER.info(">>>Connect target server and send data successfully.");
             } else {
                 LOGGER.error("===Failed to connect to target server! host: " + host + " , port: " + port);
-                ReferenceCountUtil.release(msg);
                 TransferMsg disconnectMsg = new TransferMsg();
                 disconnectMsg.setType(TransferMsgType.DISCONNECT);
                 Map<String, Object> failMetaData = new HashMap<>(1);
