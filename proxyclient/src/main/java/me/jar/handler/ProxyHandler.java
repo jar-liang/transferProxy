@@ -31,7 +31,6 @@ public class ProxyHandler extends CommonHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof TransferMsg) {
             TransferMsg transferMsg = (TransferMsg) msg;
-            LOGGER.error("客户端收到信息：" + transferMsg);
             TransferMsgType type = transferMsg.getType();
             Map<String, Object> metaData = transferMsg.getMetaData();
             String channelId = String.valueOf(metaData.get(ProxyConstants.CHANNEL_ID));
@@ -63,7 +62,6 @@ public class ProxyHandler extends CommonHandler {
                     }
                     break;
                 case KEEPALIVE:
-                    LOGGER.error("客户端收到心跳包");
                     break;
                 default:
                     throw new TransferProxyException("unknown type: " + type.getType());
@@ -87,32 +85,43 @@ public class ProxyHandler extends CommonHandler {
                 CHANNEL_MAP.put(channelId, ch);
             }
         });
-        String host = "192.168.0.101";
-        int port = 3389;
-        bootstrap.connect(host, port).addListener((ChannelFutureListener) connectFuture -> {
-            if (connectFuture.isSuccess()) {
-                connectFuture.channel().writeAndFlush(data);
-                LOGGER.info(">>>Connect target server and send data successfully.");
-            } else {
-                LOGGER.error("===Failed to connect to target server! host: " + host + " , port: " + port);
-                TransferMsg disconnectMsg = new TransferMsg();
-                disconnectMsg.setType(TransferMsgType.DISCONNECT);
-                Map<String, Object> failMetaData = new HashMap<>(1);
-                failMetaData.put(ProxyConstants.CHANNEL_ID, channelId);
-                disconnectMsg.setMetaData(failMetaData);
-                ctx.writeAndFlush(disconnectMsg);
-                CHANNEL_MAP.remove(channelId);
-            }
-        });
+        String targetIp = ProxyConstants.PROPERTY.get(ProxyConstants.TARGET_IP);
+        String targetPort = ProxyConstants.PROPERTY.get(ProxyConstants.TARGET_PORT);
+        try {
+            int targetPortNum = Integer.parseInt(targetPort);
+            bootstrap.connect(targetIp, targetPortNum).addListener((ChannelFutureListener) connectFuture -> {
+                if (connectFuture.isSuccess()) {
+                    connectFuture.channel().writeAndFlush(data);
+                    LOGGER.info(">>>Connect target server and send data successfully. target channel: " + connectFuture.channel().toString());
+                } else {
+                    LOGGER.error("===Failed to connect to target server! host: " + targetIp + " , port: " + targetPortNum);
+                    sendDisconnectMsgAndRemoveChannel(ctx, channelId);
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.error("===Failed to connect to target server! cause: " + e.getMessage());
+            sendDisconnectMsgAndRemoveChannel(ctx, channelId);
+        }
+    }
+
+    private void sendDisconnectMsgAndRemoveChannel(ChannelHandlerContext ctx, String channelId) {
+        TransferMsg disconnectMsg = new TransferMsg();
+        disconnectMsg.setType(TransferMsgType.DISCONNECT);
+        Map<String, Object> failMetaData = new HashMap<>(1);
+        failMetaData.put(ProxyConstants.CHANNEL_ID, channelId);
+        disconnectMsg.setMetaData(failMetaData);
+        ctx.writeAndFlush(disconnectMsg);
+        CHANNEL_MAP.remove(channelId);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        LOGGER.error("客户端channelActive");
+        LOGGER.info("start to register to server agent...");
         TransferMsg transferMsg = new TransferMsg();
         transferMsg.setType(TransferMsgType.REGISTER);
         Map<String, Object> metaData = new HashMap<>(1);
-        metaData.put("password", "1qaz!QAZ");
+        String registerKey = ProxyConstants.PROPERTY.get(ProxyConstants.REGISTER_KEY);
+        metaData.put("password", registerKey);
         transferMsg.setMetaData(metaData);
         ctx.writeAndFlush(transferMsg);
         super.channelActive(ctx);
@@ -120,12 +129,17 @@ public class ProxyHandler extends CommonHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        LOGGER.info("===proxy server connection failed, please check!.");
+        LOGGER.info("===client agent to server agent connection inactive, channel: " + ctx.channel().toString());
+        CHANNEL_MAP.values().forEach(e -> {
+            if (e != null && e.isActive()) {
+                e.close();
+            }
+        });
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        LOGGER.error("===proxy channel has caught exception, cause: {}", cause.getMessage());
+        LOGGER.error("===client agent has caught exception, cause: {}", cause.getMessage());
         ctx.close();
     }
 }

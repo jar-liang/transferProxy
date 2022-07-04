@@ -42,7 +42,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        LOGGER.info("===remote rdp channel inactive.");
+        LOGGER.info("===target channel inactive. channel: " + ctx.channel().toString());
         Map<String, Object> metaData = new HashMap<>(1);
         metaData.put(ProxyConstants.CHANNEL_ID, channelId);
         TransferMsg transferMsg = new TransferMsg();
@@ -53,7 +53,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        LOGGER.error("===remote rdp channel has caught exception, cause: {}", cause.getMessage());
+        LOGGER.error("===target channel has caught exception, cause: {}", cause.getMessage());
         ctx.close();
     }
 }

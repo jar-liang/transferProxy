@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import me.jar.constants.ProxyConstants;
 import me.jar.handler.ProxyHandler;
 import me.jar.utils.Byte2TransferMsgDecoder;
 import me.jar.utils.LengthContentDecoder;
@@ -38,11 +39,12 @@ public class ClientServer {
                     pipeline.addLast("proxyHandler", new ProxyHandler());
                 }
             });
-            String host = "127.0.0.1";
-            int port = 13333;
-            Channel channel = bootstrap.connect(host, port).channel();
+            String serverAgentIp = ProxyConstants.PROPERTY.get(ProxyConstants.FAR_SERVER_IP);
+            String serverAgentPort = ProxyConstants.PROPERTY.get(ProxyConstants.FAR_SERVER_PORT);
+            int serverAgentPortNum = Integer.parseInt(serverAgentPort);
+            Channel channel = bootstrap.connect(serverAgentIp, serverAgentPortNum).channel();
             channel.closeFuture().addListener(future -> {
-                LOGGER.error("workGroup.shutdownGracefully()");
+                LOGGER.info("last client agent close, shutdown workGroup and retry in 10 seconds...");
                 workGroup.shutdownGracefully();
                 new Thread(() -> {
                     while (true) {
@@ -56,12 +58,12 @@ public class ClientServer {
                             break;
                         } catch (InterruptedException e) {
                             LOGGER.error("channel close retry connection failed. detail: " + e.getMessage());
-
                         }
                     }
                 }).start();
             });
         } catch (Exception e) {
+            LOGGER.error("===client agent start failed, cause: " + e.getMessage());
             workGroup.shutdownGracefully();
         }
     }

@@ -1,6 +1,8 @@
 listenning.port=
 far.ip=
 far.port=
+target.ip=
+target.port=
 key=
 server.listen.port=
 register.key=

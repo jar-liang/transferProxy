@@ -61,7 +61,7 @@ public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        LOGGER.error("===server2Client caught exception. cause: ", cause);
+        LOGGER.error("===server2Client caught exception. channel:" + ctx.channel().toString() + ". cause: ", cause.getMessage());
         ctx.close();
     }
 }

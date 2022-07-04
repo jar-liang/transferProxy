@@ -42,4 +42,8 @@ public interface ProxyConstants {
     String REGISTER_KEY = "register.key";
 
     String SERVER_CLIENT_PORT = "server.to.client.port";
+
+    String TARGET_IP = "target.ip";
+
+    String TARGET_PORT = "target.port";
 }
