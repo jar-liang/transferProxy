@@ -61,7 +61,7 @@ public class ConnectClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        LOGGER.error("===ConnectRemoteHandler caught exception", cause);
+        LOGGER.error("===server2Client caught exception. cause: ", cause);
         ctx.close();
     }
 }

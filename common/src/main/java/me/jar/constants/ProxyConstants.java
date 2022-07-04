@@ -21,9 +21,9 @@ public interface ProxyConstants {
 
     int OTHER_OS = 3;
 
-    String PROPERTY_NAME_WIN = "D:\\usr\\property\\property.txt";
+    String PROPERTY_NAME_WIN = "C:\\usr\\transferProxy\\property.txt";
 
-    String PROPERTY_NAME_LINUX= "/usr/property/property.txt";
+    String PROPERTY_NAME_LINUX= "/usr/transferProxy/property.txt";
 
     String KEY_NAME_PORT = "listenning.port";
 
@@ -36,4 +36,10 @@ public interface ProxyConstants {
     String FAR_SERVER_PORT = "far.port";
 
     String CHANNEL_ID = "channelId";
+
+    String SERVER_LISTEN_PORT = "server.listen.port";
+
+    String REGISTER_KEY = "register.key";
+
+    String SERVER_CLIENT_PORT = "server.to.client.port";
 }

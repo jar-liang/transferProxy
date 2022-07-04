@@ -2,3 +2,6 @@ listenning.port=
 far.ip=
 far.port=
 key=
+server.listen.port=
+register.key=
+server.to.client.port=

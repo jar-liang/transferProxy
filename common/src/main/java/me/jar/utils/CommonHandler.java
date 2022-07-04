@@ -26,17 +26,16 @@ public class CommonHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         LOGGER.error("===caught exception", cause);
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof IdleStateEvent) {
-            LOGGER.error("执行userEventTriggered，ctx：" + ctx.channel().localAddress().toString() + "，evt: " + evt.toString());
             IdleStateEvent event = (IdleStateEvent) evt;
             if (event.state() == IdleState.READER_IDLE) {
-                LOGGER.info("===Read idle loss connection");
+                LOGGER.info("===Read idle loss connection. close channel: " + ctx.channel().toString());
                 ctx.close();
             }
             if (event.state() == IdleState.WRITER_IDLE) {

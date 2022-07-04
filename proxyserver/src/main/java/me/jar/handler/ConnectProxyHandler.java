@@ -34,11 +34,7 @@ public class ConnectProxyHandler extends CommonHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof TransferMsg) {
-            LOGGER.error("registerFlag: " + registerFlag);
-            LOGGER.error("clientServerChannel" + clientServerChannel);
-            LOGGER.error("CHANNELS: " + CHANNELS.toString());
             TransferMsg transferMsg = (TransferMsg) msg;
-            LOGGER.error("服务端收到信息：" + transferMsg);
             if (transferMsg.getType() == TransferMsgType.REGISTER) {
                 doRegister(transferMsg);
                 return;
@@ -55,7 +51,6 @@ public class ConnectProxyHandler extends CommonHandler {
                         break;
                     case KEEPALIVE:
                         // 心跳包，不处理
-                        LOGGER.error("服务端收到心跳包");
                         break;
                     default:
                         throw new TransferProxyException("channel is registered, message type is not one of DISCONNECT,DATA,KEEPALIVE");
@@ -71,19 +66,18 @@ public class ConnectProxyHandler extends CommonHandler {
         retnTransferMsg.setType(TransferMsgType.REGISTER_RESULT);
         Map<String, Object> retnMetaData = new HashMap<>();
         Map<String, Object> metaData = transferMsg.getMetaData();
-        if (!metaData.containsKey("password") || !"1qaz!QAZ".equals(metaData.get("password"))) {
-//        if (false) { // todo 测试先不管密钥
+        String registerKey = ProxyConstants.PROPERTY.get(ProxyConstants.REGISTER_KEY);
+        if (!metaData.containsKey("password") || !registerKey.equals(metaData.get("password"))) {
             // 没有密钥或密钥错误，返回提示， 不执行注册
             retnMetaData.put("result", "0");
             retnMetaData.put("reason", "Token is wrong");
-//            retnTransferMsg.setMetaData(retnMetaData);
-//            channel.writeAndFlush(retnTransferMsg);
         } else {
             // 启动一个新的serverBootstrap
             EventLoopGroup bossGroup = new NioEventLoopGroup(1);
             EventLoopGroup workerGroup = new NioEventLoopGroup();
-            int port = 9999; // 暂定
             try {
+                String server2ClientPort = ProxyConstants.PROPERTY.get(ProxyConstants.SERVER_CLIENT_PORT);
+                int server2ClientPortNum = Integer.parseInt(server2ClientPort);
                 ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
@@ -101,19 +95,18 @@ public class ConnectProxyHandler extends CommonHandler {
                         .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                         .childOption(ChannelOption.SO_KEEPALIVE, true)
                         .childHandler(channelInitializer);
-                ChannelFuture cf = serverBootstrap.bind(port).sync();
+                ChannelFuture cf = serverBootstrap.bind(server2ClientPortNum).sync();
                 clientServerChannel = cf.channel();
-                LOGGER.info(">>>Proxy server started, the listening port is {}.", port);
                 cf.channel().closeFuture().addListener((ChannelFutureListener) future -> {
-                    LOGGER.error("bossGroup and workerGroup shutdown!");
+                    LOGGER.error("server2Client close, bossGroup and workerGroup shutdown!");
                     bossGroup.shutdownGracefully();
                     workerGroup.shutdownGracefully();
                 });
                 retnMetaData.put("result", "1");
                 registerFlag = true;
-                LOGGER.info("client server starting, port is " + port);
+                LOGGER.info("server2Client starting, port is " + server2ClientPortNum);
             } catch (Exception e) {
-                LOGGER.error("==client server starts failed, detail: " + e.getMessage());
+                LOGGER.error("==server2Client starts failed, detail: " + e.getMessage());
                 retnMetaData.put("result", "0");
                 retnMetaData.put("reason", "client server cannot start");
                 bossGroup.shutdownGracefully();
@@ -130,11 +123,9 @@ public class ConnectProxyHandler extends CommonHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        // 不要打印太多日志
-        LOGGER.error("服务端与客户端连接channelInactive");
-        LOGGER.info("===ConnectProxyHandler执行channelInactive");
+        LOGGER.warn("===server agent to client agent connection inactive. channel: " + ctx.channel().toString());
         if (clientServerChannel != null) {
-            LOGGER.error("关闭clientServerChannel");
+            LOGGER.warn("due to server agent and client agent connection inactive, server2Client has to close. channel: " + clientServerChannel.toString());
             clientServerChannel.close();
         }
     }
