@@ -30,6 +30,11 @@ public class ConnectProxyHandler extends CommonHandler {
     private boolean registerFlag = false;
     private static final ChannelGroup CHANNELS = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     private Channel clientServerChannel;
+    private final ChannelGroup countChannels;
+
+    public ConnectProxyHandler(ChannelGroup countChannels) {
+        this.countChannels = countChannels;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -76,8 +81,9 @@ public class ConnectProxyHandler extends CommonHandler {
             EventLoopGroup bossGroup = new NioEventLoopGroup(1);
             EventLoopGroup workerGroup = new NioEventLoopGroup();
             try {
-                String server2ClientPort = ProxyConstants.PROPERTY.get(ProxyConstants.SERVER_CLIENT_PORT);
-                int server2ClientPortNum = Integer.parseInt(server2ClientPort);
+                Object portObj = metaData.get("port");
+                int server2ClientPortNum = Integer.parseInt(String.valueOf(portObj));
+                LOGGER.info("register port: " + server2ClientPortNum);
                 ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
@@ -97,6 +103,7 @@ public class ConnectProxyHandler extends CommonHandler {
                         .childHandler(channelInitializer);
                 ChannelFuture cf = serverBootstrap.bind(server2ClientPortNum).sync();
                 clientServerChannel = cf.channel();
+                countChannels.add(clientServerChannel);
                 cf.channel().closeFuture().addListener((ChannelFutureListener) future -> {
                     LOGGER.error("server2Client close, bossGroup and workerGroup shutdown!");
                     bossGroup.shutdownGracefully();

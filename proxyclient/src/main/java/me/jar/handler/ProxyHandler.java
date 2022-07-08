@@ -122,6 +122,8 @@ public class ProxyHandler extends CommonHandler {
         Map<String, Object> metaData = new HashMap<>(1);
         String registerKey = ProxyConstants.PROPERTY.get(ProxyConstants.REGISTER_KEY);
         metaData.put("password", registerKey);
+        String server2ClientPort = ProxyConstants.PROPERTY.get(ProxyConstants.SERVER_CLIENT_PORT);
+        metaData.put("port", server2ClientPort);
         transferMsg.setMetaData(metaData);
         ctx.writeAndFlush(transferMsg);
         super.channelActive(ctx);
