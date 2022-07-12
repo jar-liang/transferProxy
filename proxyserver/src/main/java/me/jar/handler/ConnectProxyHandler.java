@@ -9,15 +9,21 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import me.jar.constants.ProxyConstants;
 import me.jar.constants.TransferMsgType;
 import me.jar.exception.TransferProxyException;
 import me.jar.message.TransferMsg;
 import me.jar.utils.CommonHandler;
+import me.jar.utils.PlatformUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,8 +77,53 @@ public class ConnectProxyHandler extends CommonHandler {
         retnTransferMsg.setType(TransferMsgType.REGISTER_RESULT);
         Map<String, Object> retnMetaData = new HashMap<>();
         Map<String, Object> metaData = transferMsg.getMetaData();
-        String registerKey = ProxyConstants.PROPERTY.get(ProxyConstants.REGISTER_KEY);
-        if (!metaData.containsKey("password") || !registerKey.equals(metaData.get("password"))) {
+        String userFileName = "";
+        if (PlatformUtil.PLATFORM_CODE == ProxyConstants.WIN_OS) {
+            userFileName = ProxyConstants.USER_FILE_WIN;
+        } else if (PlatformUtil.PLATFORM_CODE == ProxyConstants.LINUX_OS) {
+            userFileName = ProxyConstants.USER_FILE_LINUX;
+        } else {
+            LOGGER.error("error code: 01, server inner error, check user file failed because platform code is wrong: " + PlatformUtil.PLATFORM_CODE);
+            retnMetaData.put("result", "0");
+            retnMetaData.put("reason", "server inner error: 01, contact the admin!");
+            sendBackMsgAndDealResult(retnTransferMsg, retnMetaData);
+            return;
+        }
+
+        Map<String, String> userAndPwdMap = new HashMap<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(userFileName), CharsetUtil.UTF_8))) {
+            while (true) {
+                String line = reader.readLine();
+                if (line == null) {
+                    break;
+                }
+                if (line.length() == 0) {
+                    continue;
+                }
+                String[] split = line.split("\\|");
+                if (split.length == 2) {
+                    String userName = split[0];
+                    String pwd = split[1];
+                    if (userName != null && userName.length() > 0
+                            && pwd != null && pwd.length() > 0) {
+                        userAndPwdMap.put(userName.trim(), pwd.trim());
+                    }
+                }
+            }
+        } catch (IOException e) {
+            // 打印日志提示，读取配置文件失败
+            LOGGER.error("error code: 02, reading user file failed，please check!", e);
+            retnMetaData.put("result", "0");
+            retnMetaData.put("reason", "server inner error: 02, contact the admin!");
+            sendBackMsgAndDealResult(retnTransferMsg, retnMetaData);
+            return;
+        }
+        String userNameRegister = String.valueOf(metaData.get("userName"));
+        boolean isLegal = false;
+        if (userAndPwdMap.containsKey(userNameRegister) && userAndPwdMap.get(userNameRegister).equals(metaData.get("password"))) {
+            isLegal = true;
+        }
+        if (!isLegal) {
             // 没有密钥或密钥错误，返回提示， 不执行注册
             retnMetaData.put("result", "0");
             retnMetaData.put("reason", "Token is wrong");
@@ -120,6 +171,10 @@ public class ConnectProxyHandler extends CommonHandler {
                 workerGroup.shutdownGracefully();
             }
         }
+        sendBackMsgAndDealResult(retnTransferMsg, retnMetaData);
+    }
+
+    private void sendBackMsgAndDealResult(TransferMsg retnTransferMsg, Map<String, Object> retnMetaData) {
         retnTransferMsg.setMetaData(retnMetaData);
         channel.writeAndFlush(retnTransferMsg);
         if (!registerFlag) {

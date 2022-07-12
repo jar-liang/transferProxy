@@ -18,17 +18,21 @@ import java.util.Map;
  */
 public final class PlatformUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(PlatformUtil.class);
+    public static final int PLATFORM_CODE;
+
+    static {
+        PLATFORM_CODE = getPlatform();
+    }
 
     private PlatformUtil() {
     }
 
     public static Map<String, String> getProperty() {
         Map<String, String> propertyMap = new HashMap<>(20);
-        int platform = getPlatform();
-        String propertyFileName = "";
-        if (platform == ProxyConstants.WIN_OS) {
+        String propertyFileName;
+        if (PLATFORM_CODE == ProxyConstants.WIN_OS) {
             propertyFileName = ProxyConstants.PROPERTY_NAME_WIN;
-        } else if (platform == ProxyConstants.LINUX_OS) {
+        } else if (PLATFORM_CODE == ProxyConstants.LINUX_OS) {
             propertyFileName = ProxyConstants.PROPERTY_NAME_LINUX;
         } else {
             // 打印日志提示，不支持的系统

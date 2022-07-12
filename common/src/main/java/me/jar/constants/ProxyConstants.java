@@ -21,9 +21,17 @@ public interface ProxyConstants {
 
     int OTHER_OS = 3;
 
-    String PROPERTY_NAME_WIN = "C:\\usr\\transferProxy\\property.txt";
+    String BASE_PATH_WIN = "C:\\usr\\transferProxy\\";
 
-    String PROPERTY_NAME_LINUX= "/usr/transferProxy/property.txt";
+    String BASE_PATH_LINUX = "/usr/transferProxy/";
+
+    String PROPERTY_NAME_WIN = BASE_PATH_WIN + "property.txt";
+
+    String PROPERTY_NAME_LINUX= BASE_PATH_LINUX + "property.txt";
+
+    String USER_FILE_WIN = BASE_PATH_WIN + "user.txt";
+
+    String USER_FILE_LINUX = BASE_PATH_LINUX + "user.txt";
 
     String KEY_NAME_PORT = "listenning.port";
 
