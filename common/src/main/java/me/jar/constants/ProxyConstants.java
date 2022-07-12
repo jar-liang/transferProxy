@@ -54,4 +54,8 @@ public interface ProxyConstants {
     String TARGET_IP = "target.ip";
 
     String TARGET_PORT = "target.port";
+
+    String USER_NAME = "user.name";
+
+    String USER_PASSWORD = "user.password";
 }

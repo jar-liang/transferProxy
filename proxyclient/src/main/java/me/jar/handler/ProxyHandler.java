@@ -119,9 +119,11 @@ public class ProxyHandler extends CommonHandler {
         LOGGER.info("start to register to server agent...");
         TransferMsg transferMsg = new TransferMsg();
         transferMsg.setType(TransferMsgType.REGISTER);
-        Map<String, Object> metaData = new HashMap<>(1);
-        String registerKey = ProxyConstants.PROPERTY.get(ProxyConstants.REGISTER_KEY);
-        metaData.put("password", registerKey);
+        Map<String, Object> metaData = new HashMap<>(3);
+        String userName = ProxyConstants.PROPERTY.get(ProxyConstants.USER_NAME);
+        metaData.put("userName", userName);
+        String password = ProxyConstants.PROPERTY.get(ProxyConstants.USER_PASSWORD);
+        metaData.put("password", password);
         String server2ClientPort = ProxyConstants.PROPERTY.get(ProxyConstants.SERVER_CLIENT_PORT);
         metaData.put("port", server2ClientPort);
         transferMsg.setMetaData(metaData);

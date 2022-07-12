@@ -1,9 +1,9 @@
-listenning.port=
 far.ip=
 far.port=
+server.to.client.port=
 target.ip=
 target.port=
-key=
+user.name=
+user.password=
+
 server.listen.port=
-register.key=
-server.to.client.port=
