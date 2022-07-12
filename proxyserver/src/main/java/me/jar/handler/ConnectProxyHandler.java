@@ -77,7 +77,7 @@ public class ConnectProxyHandler extends CommonHandler {
         retnTransferMsg.setType(TransferMsgType.REGISTER_RESULT);
         Map<String, Object> retnMetaData = new HashMap<>();
         Map<String, Object> metaData = transferMsg.getMetaData();
-        String userFileName = "";
+        String userFileName;
         if (PlatformUtil.PLATFORM_CODE == ProxyConstants.WIN_OS) {
             userFileName = ProxyConstants.USER_FILE_WIN;
         } else if (PlatformUtil.PLATFORM_CODE == ProxyConstants.LINUX_OS) {
