@@ -1,7 +1,14 @@
 package me.jar.handler;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -9,6 +16,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import me.jar.constants.ProxyConstants;
@@ -52,10 +60,10 @@ public class ConnectProxyHandler extends CommonHandler {
             }
             if (registerFlag) {
                 switch (transferMsg.getType()) {
-                    case DISCONNECT:
-                        // 关闭连接
-                        CHANNELS.close(channelItem -> channelItem.id().asLongText().equals(transferMsg.getMetaData().get(ProxyConstants.CHANNEL_ID)));
-                        break;
+//                    case DISCONNECT:
+//                        // 关闭连接
+//                        CHANNELS.close(channelItem -> channelItem.id().asLongText().equals(transferMsg.getMetaData().get(ProxyConstants.CHANNEL_ID)));
+//                        break;
                     case DATA:
                         // 传输数据
                         CHANNELS.writeAndFlush(transferMsg.getDate(), channelItem -> channelItem.id().asLongText().equals(transferMsg.getMetaData().get(ProxyConstants.CHANNEL_ID)));
@@ -142,7 +150,8 @@ public class ConnectProxyHandler extends CommonHandler {
                         // 添加与客户端交互的handler
                         pipeline.addLast("byteArrayDecoder", new ByteArrayDecoder());
                         pipeline.addLast("byteArrayEncoder", new ByteArrayEncoder());
-                        pipeline.addLast("connectClient", new ConnectClientHandler(channel));
+                        pipeline.addLast("idleEvt", new IdleStateHandler(0, 10, 0));
+                        pipeline.addLast("connectClient", new ConnectClientHandler(channel, CHANNELS));
                         CHANNELS.add(ch);
                     }
                 };

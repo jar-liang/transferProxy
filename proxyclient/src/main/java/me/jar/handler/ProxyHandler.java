@@ -1,7 +1,13 @@
 package me.jar.handler;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -43,15 +49,8 @@ public class ProxyHandler extends CommonHandler {
                         ctx.close();
                     }
                     break;
-//                case CONNECT: // 不需要了，直接根据是否有连接判断进行处理，在下面的DATA的case中处理连接
-//                    connectTarget(ctx, msg, metaData);
-//                    break;
                 case DISCONNECT:
-                    Channel channel = CHANNEL_MAP.get(channelId);
-                    if (channel != null) {
-                        channel.close();
-                        CHANNEL_MAP.remove(channelId);
-                    }
+                    closeChannelAndMapRemove(channelId);
                     break;
                 case DATA:
                     Channel channelData = CHANNEL_MAP.get(channelId);
@@ -69,6 +68,14 @@ public class ProxyHandler extends CommonHandler {
         }
     }
 
+    private void closeChannelAndMapRemove(String channelId) {
+        Channel channel = CHANNEL_MAP.get(channelId);
+        if (channel != null) {
+            channel.close();
+            CHANNEL_MAP.remove(channelId);
+        }
+    }
+
     private void connectTarget(ChannelHandlerContext ctx, byte[] data, Map<String, Object> metaData) {
         String channelId = String.valueOf(metaData.get(ProxyConstants.CHANNEL_ID));
         EventLoopGroup workGroup = new NioEventLoopGroup(1);
@@ -81,7 +88,7 @@ public class ProxyHandler extends CommonHandler {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("byteArrayDecoder", new ByteArrayDecoder());
                 pipeline.addLast("byteArrayEncoder", new ByteArrayEncoder());
-                pipeline.addLast("clientHandler", new ClientHandler(ctx.channel(), channelId));
+                pipeline.addLast("clientHandler", new ClientHandler(ctx.channel(), channelId, CHANNEL_MAP));
                 CHANNEL_MAP.put(channelId, ch);
             }
         });
@@ -92,26 +99,13 @@ public class ProxyHandler extends CommonHandler {
             bootstrap.connect(targetIp, targetPortNum).addListener((ChannelFutureListener) connectFuture -> {
                 if (connectFuture.isSuccess()) {
                     connectFuture.channel().writeAndFlush(data);
-                    LOGGER.info(">>>Connect target server and send data successfully. target channel: " + connectFuture.channel().toString());
                 } else {
                     LOGGER.error("===Failed to connect to target server! host: " + targetIp + " , port: " + targetPortNum);
-                    sendDisconnectMsgAndRemoveChannel(ctx, channelId);
                 }
             });
         } catch (Exception e) {
             LOGGER.error("===Failed to connect to target server! cause: " + e.getMessage());
-            sendDisconnectMsgAndRemoveChannel(ctx, channelId);
         }
-    }
-
-    private void sendDisconnectMsgAndRemoveChannel(ChannelHandlerContext ctx, String channelId) {
-        TransferMsg disconnectMsg = new TransferMsg();
-        disconnectMsg.setType(TransferMsgType.DISCONNECT);
-        Map<String, Object> failMetaData = new HashMap<>(1);
-        failMetaData.put(ProxyConstants.CHANNEL_ID, channelId);
-        disconnectMsg.setMetaData(failMetaData);
-        ctx.writeAndFlush(disconnectMsg);
-        CHANNEL_MAP.remove(channelId);
     }
 
     @Override
